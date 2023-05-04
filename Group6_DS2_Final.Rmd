@@ -1,0 +1,35 @@
+---
+title: "Data Science 2 Final"
+author: "Group 6"
+output: 
+  pdf_document:
+    toc: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Set up
+
+## Load libraries and data
+```{r warning=FALSE, message=FALSE}
+library(caret)
+library(mgcv)
+library(earth)
+library(tidyverse)
+library(summarytools)
+library(corrplot)
+library(ggpubr)
+
+setwd("D:/CUMC/Y2S2/DS2/Final/ds2_final")
+
+load("./recovery.RData") 
+
+set.seed(2460) 
+
+dat <- dat[sample(1:10000, 2000),]
+```
+
+

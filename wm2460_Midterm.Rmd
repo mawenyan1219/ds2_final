@@ -1,0 +1,390 @@
+---
+title: "Midterm"
+author: "Wenyan Ma (wm2460)"
+output: pdf_document
+---
+
+# Set up
+
+## Load libraries and data
+```{r warning=FALSE, message=FALSE}
+library(caret)
+library(mgcv)
+library(earth)
+library(tidyverse)
+library(summarytools)
+library(corrplot)
+library(ggpubr)
+
+setwd("D:/CUMC/Y2S2/DS2/Midterm")
+
+load("./recovery.RData") 
+
+set.seed(2460) 
+
+dat <- dat[sample(1:10000, 2000),]
+```
+
+# Exploratory analysis and data visualization
+
+## Data Partition
+
+Here, we mainly want to investigate the EDA of the training dataset. Therefore, we will start with the data partition. 
+
+```{r warning=FALSE, message=FALSE}
+set.seed(2460)
+
+trainRows <- createDataPartition(y = dat$recovery_time, p = 0.8, list = FALSE)
+```
+
+
+## Understanding the outcome variable `recovery_time`
+```{r warning=FALSE, message=FALSE}
+# check the outcome variable
+hist(dat$recovery_time[trainRows], breaks = 50)
+```
+
+The distribution of the outcome variable `recovery_time` is heavily right-skewed. To account for this, I will take the log-transformation of the outcome and use that variable for following analyses.
+
+
+```{r warning=FALSE, message=FALSE}
+dat = dat %>% 
+  na.omit(dat) %>% 
+  mutate(lrecovery_time = log(recovery_time)) %>% 
+  select(-recovery_time, -id) 
+  
+# log-transformation helped with making it more normal
+hist(dat$lrecovery_time[trainRows], breaks = 50)
+```
+
+
+## Summary of the dataset
+```{r warning=FALSE, message=FALSE}
+st_options(plain.ascii = F,
+           style = "rmarkdown",
+           dfSummary.silent = T,
+           footnote = NA,
+           subtitle.emphasis = F)
+
+dfSummary(dat[trainRows, -1])
+```
+
+
+## Understand categorical variables
+```{r warning=FALSE, message=FALSE}
+gender = (dat[trainRows, -1]) %>% 
+  ggplot(aes(x = gender)) +  geom_bar() +  labs(x = "Gender", y = "Count")
+
+race = (dat[trainRows, -1]) %>% 
+  ggplot(aes(x = race)) + geom_bar() + labs(x = "Race",y = "Count")
+
+smoking = (dat[trainRows, -1]) %>% 
+  ggplot(aes(x = smoking)) + geom_bar() + labs(x = "Smoking", y = "Count")
+
+hypertension = (dat[trainRows, -1]) %>% 
+  ggplot(aes(x = hypertension)) + geom_bar() + labs(x = "Hypertension", 
+                                                    y = "Count")
+diabetes = (dat[trainRows, -1]) %>% 
+  ggplot(aes(x = diabetes)) + geom_bar() + labs(x = "Diabetes",y = "Count")
+
+vaccine = (dat[trainRows, -1]) %>% 
+  ggplot(aes(x = vaccine)) + geom_bar() + labs(x = "Vaccination status",
+                                               y = "Count")
+severity = (dat[trainRows, -1]) %>% 
+  ggplot(aes(x = severity)) + geom_bar() + labs(x = "Severity", y = "Count")
+
+study = (dat[trainRows, -1]) %>% 
+  ggplot(aes(x = study)) + geom_bar() + labs(x = "Study Site", y = "Count")
+
+cat_combined_plot = ggarrange(gender, race, smoking, hypertension, 
+                               diabetes, vaccine,severity, study,
+                          ncol = 2, nrow = 4)
+
+cat_combined_plot
+```
+
+
+## Understand continuous variables
+```{r warning=FALSE, message=FALSE}
+par(mar = c(3, 3, 2, 2), mfrow = c(2, 3))
+
+age = hist(dat$age[trainRows], breaks = 50)
+
+bmi = hist(dat$bmi[trainRows], breaks = 50)
+
+height = hist(dat$height[trainRows], breaks = 50)
+
+weight = hist(dat$weight[trainRows], breaks = 50)
+
+SBP = hist(dat$SBP[trainRows], breaks = 50)
+
+LDL = hist(dat$LDL[trainRows], breaks = 50)
+```
+
+
+## Understand the correlation between predictors
+```{r warning=FALSE, message=FALSE}
+correlation <- model.matrix(lrecovery_time ~ ., dat)[trainRows,-1]
+
+corrplot(cor(correlation), method = "circle", type = "full")
+```
+
+
+## Understand the relationship with continuous predictors and the outcome
+```{r warning=FALSE, message=FALSE}
+theme1 <- trellis.par.get()
+theme1$plot.symbol$col <- rgb(.2, .4, .2, .5)
+theme1$plot.symbol$pch <- 16
+theme1$plot.line$col <- rgb(.8, .1, .1, 1)
+theme1$plot.line$lwd <- 2
+theme1$strip.background$col <- rgb(.0, .2, .6, .2)
+trellis.par.set(theme1)
+
+# plotting continuous predictors 
+featurePlot(x = model.matrix(lrecovery_time ~ ., dat)[trainRows,c("age", "SBP", "LDL", "height", "weight", "bmi")],
+            y = dat$lrecovery_time[trainRows],
+            plot = "scatter",
+            span = .5,
+            labels = c("Predictors","Y"),
+            type = c("p", "smooth"),
+            layout = c(3,2))
+```
+
+
+## Considering variables based on the EDA
+
+From the correlation plot, we can observe that `bmi` is highly correlated with `weight` and `height`, which makes sense because BMI is calculated by weight divided by the square of height. This demonstrates collinearity between the variables, and to account for this, I will remove the `bmi` variable for the predictions. 
+
+Also, I believe that the `study` variable is more of a geographical indicator to distinguish different study sites, and it will not be critical in predicting recovery time. Therefore, I will also remove  the `study` variable. 
+
+Lastly, I will remove variables `race` and `smoking` since I have created dummy variables for them and I will use the dummy variables in further analyses.
+
+```{r warning=FALSE, message=FALSE}
+midterm = dat %>% 
+  mutate(
+  # create dummy variables for categorical variables
+    # set up 3 dummy variables for `race`, reference = White:
+         race_2 = ifelse(race == 2, 1, 0), 
+         race_3 = ifelse(race == 3, 1, 0),
+         race_4 = ifelse(race == 4, 1, 0),
+    # set up 2 dummy variables for `smoking`, reference = Never smoked:
+         smoking_1 = ifelse(smoking == 1, 1, 0), 
+         smoking_2 = ifelse(smoking == 2, 1, 0)) 
+
+# remove variables that will not be used
+midterm = midterm %>% 
+  select(-bmi, -study, -race, -smoking) 
+
+# partition again based on the new outcome variable
+set.seed(2460)
+
+trainRows_new <- createDataPartition(y = midterm$lrecovery_time, p = 0.8, list = FALSE)
+
+x <- model.matrix(lrecovery_time ~ ., midterm)[trainRows_new,-1]
+
+y <- midterm$lrecovery_time[trainRows_new]
+
+x2 <- model.matrix(lrecovery_time ~ ., midterm)[-trainRows_new,-1]
+
+y2 <- midterm$lrecovery_time[-trainRows_new]
+
+ctrl1 <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
+```
+
+
+# Model training
+
+## Mode 1: linear model
+
+### Train the model
+```{r warning=FALSE, message=FALSE}
+set.seed(2460)
+
+lm.fit <- train(x, y, 
+                method = "glm", 
+                preProcess = c("center", "scale"),
+                trControl = ctrl1)
+
+summary(lm.fit)
+```
+
+
+## Model 2: Ridge
+
+### Train the model
+```{r warning=FALSE, message=FALSE}
+set.seed(2460)
+
+ridge.fit <- train(x, y,
+                   method = "glmnet",
+                   tuneGrid = expand.grid(alpha = 0,
+                                          lambda = exp(seq(-1, -7, length=100))),
+                   preProc = c("center", "scale"),
+                   trControl = ctrl1)
+
+ridge.fit$bestTune
+
+plot(ridge.fit, xTrans = log)
+
+coef(ridge.fit$finalModel, s = ridge.fit$bestTune$lambda)
+```
+
+
+## Model 3: Lasso
+```{r warning=FALSE, message=FALSE}
+set.seed(2460)
+
+lasso.fit <- train(x, y, 
+                   method = "glmnet", 
+                   tuneGrid = expand.grid(alpha = 1, 
+                                          lambda = exp(seq(-9, -3, length = 100))),
+                   preProcess = c("center", "scale"),
+                   trControl = ctrl1)
+
+lasso.fit$bestTune
+
+plot(lasso.fit, xTrans = log)
+
+coef(lasso.fit$finalModel, s = lasso.fit$bestTune$lambda)
+```
+
+
+## Model 4: Elastic net
+```{r warning=FALSE, message=FALSE}
+set.seed(2460)
+
+enet.fit <- train(x, y, 
+                  method = "glmnet", 
+                  tuneGrid = expand.grid(alpha = seq(0, 1, length = 21), 
+                                         lambda = exp(seq(-8, 1, length = 100))), 
+                  preProcess = c("center", "scale"),
+                  trControl = ctrl1)
+
+enet.fit$bestTune
+
+myCol <- rainbow(25)
+
+myPar <- list(superpose.symbol = list(col = myCol),
+              superpose.line = list(col = myCol))
+
+plot(enet.fit, par.settings = myPar, xTrans = log)
+
+coef(enet.fit$finalModel, s = enet.fit$bestTune$lambda)
+```
+
+
+## Model 5: Partial least square
+```{r warning=FALSE, message=FALSE}
+set.seed(2460)
+
+pls.fit <- train(x, y,
+                 method = "pls",
+                 tuneGrid = data.frame(ncomp = 1:15),
+                 trControl = ctrl1,
+                 preProcess = c("center", "scale"))
+
+pls.fit$bestTune
+
+ggplot(pls.fit, highlight = TRUE) + theme_bw()
+
+summary(pls.fit)
+
+coef(pls.fit$finalModel)
+```
+
+
+## Model 6: GAM
+```{r warning=FALSE, message=FALSE}
+set.seed(2460)
+
+gam.fit <- train(x, y,
+                 method = "gam",
+                 tuneGrid = data.frame(method = "GCV.Cp", select = c(TRUE,FALSE)),
+                 preProcess = c("center", "scale"),
+                 trControl = ctrl1)
+
+gam.fit$bestTune
+
+gam.fit$finalModel
+
+summary(gam.fit)
+```
+
+
+### Plot continuous predictors in GAM
+```{r warning=FALSE, message=FALSE}
+var.names <- c("age", "SBP", "LDL", "height", "weight", "-")
+
+# make a matrix for easier comprehension of the plot with 16 predictors
+matrix <- matrix(var.names, nrow = 2, ncol = 3, byrow = TRUE)
+
+# use the matrix to correspond each plot with each predictor
+print(matrix)
+
+gam.plot <- gam.fit$finalModel
+
+# make 16 plots into one
+par(mar = c(3, 3, 2, 2), mfrow = c(2, 3))
+
+plot(gam.plot)
+
+title(main = "Predictors' Plot", cex.main = 1, font.main = 3, outer = TRUE, line = -1)
+```
+
+
+## Model 7: MARS
+```{r warning=FALSE, message=FALSE}
+mars_grid <- expand.grid(degree = 1:3,
+                         nprune = 2:25) 
+
+set.seed(2460)
+
+mars.fit <- train(x, y,
+                  method = "earth",
+                  tuneGrid = mars_grid,
+                  preProcess = c("center", "scale"),
+                  trControl = ctrl1)
+
+ggplot(mars.fit, highlight = TRUE)
+
+mars.fit$bestTune
+
+coef(mars.fit$finalModel)
+```
+
+# Model comparison
+```{r warning=FALSE, message=FALSE}
+res <- resamples(list(lm = lm.fit, 
+                      ridge = ridge.fit,
+                      lasso = lasso.fit,
+                      enet = enet.fit,
+                      pls = pls.fit,
+                      gam = gam.fit,
+                      mars = mars.fit))
+
+summary(res)
+
+bwplot(res, metric = "RMSE")
+```
+
+**Select MARS model as the final model**
+
+## Test error
+```{r warning=FALSE, message=FALSE}
+mars.pred <- predict(mars.fit, newdata = x2)
+
+mars.testerror = mean((mars.pred - y2)^2)
+
+mars.testerror
+```
+
+
+### Training error
+```{r warning=FALSE, message=FALSE}
+mars.pred_train <- predict(mars.fit, newdata = x)
+
+mars.trainerror = mean((mars.pred_train - y)^2)
+
+mars.trainerror
+```
+
