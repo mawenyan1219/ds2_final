@@ -6,10 +6,7 @@ output:
     toc: TRUE
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
+\newpage
 
 # Set up
 
@@ -26,10 +23,189 @@ library(ggpubr)
 setwd("D:/CUMC/Y2S2/DS2/Final/ds2_final")
 
 load("./recovery.RData") 
-
-set.seed(2460) 
-
-dat <- dat[sample(1:10000, 2000),]
 ```
+
+## Subset 2 df and keep unique observations
+```{r warning=FALSE, message=FALSE}
+set.seed(2543) 
+
+dat1 <- dat[sample(1:10000, 2000),]
+
+set.seed(4017) 
+
+dat2 <- dat[sample(1:10000, 2000),]
+
+dat_bind <- unique(rbind(dat1, dat2))
+```
+
+# Exploratory analysis and data visualization
+
+## Data Partition
+
+Here, we mainly want to investigate the EDA of the training dataset. Therefore, we will start with the data partition. 
+
+```{r warning=FALSE, message=FALSE}
+set.seed(2460)
+
+trainRows <- createDataPartition(y = dat_bind$recovery_time, 
+                                 p = 0.8, list = FALSE)
+```
+
+
+## Understanding the outcome variable `recovery_time`
+```{r warning=FALSE, message=FALSE}
+# check the outcome variable
+hist(dat_bind$recovery_time[trainRows], breaks = 50)
+```
+
+The distribution of the outcome variable `recovery_time` is heavily right-skewed. To account for this, I will take the log-transformation of the outcome and use that variable for following analyses.
+
+
+```{r warning=FALSE, message=FALSE}
+dat_bind = dat_bind %>% 
+  na.omit(dat_bind) %>% 
+  mutate(lrecovery_time = log(recovery_time)) %>% 
+  select(-recovery_time, -id) 
+  
+# log-transformation helped with making it more normal
+hist(dat_bind$lrecovery_time[trainRows], breaks = 50)
+```
+
+
+## Summary of the dataset
+```{r warning=FALSE, message=FALSE}
+st_options(plain.ascii = F,
+           style = "rmarkdown",
+           dfSummary.silent = T,
+           footnote = NA,
+           subtitle.emphasis = F)
+
+dfSummary(dat_bind[trainRows, -1])
+```
+
+
+## Understand categorical variables
+```{r warning=FALSE, message=FALSE}
+gender = (dat_bind[trainRows, -1]) %>% 
+  ggplot(aes(x = gender)) +  geom_bar() +  labs(x = "Gender", y = "Count")
+
+race = (dat_bind[trainRows, -1]) %>% 
+  ggplot(aes(x = race)) + geom_bar() + labs(x = "Race",y = "Count")
+
+smoking = (dat_bind[trainRows, -1]) %>% 
+  ggplot(aes(x = smoking)) + geom_bar() + labs(x = "Smoking", y = "Count")
+
+hypertension = (dat_bind[trainRows, -1]) %>% 
+  ggplot(aes(x = hypertension)) + geom_bar() + labs(x = "Hypertension", 
+                                                    y = "Count")
+diabetes = (dat_bind[trainRows, -1]) %>% 
+  ggplot(aes(x = diabetes)) + geom_bar() + labs(x = "Diabetes",y = "Count")
+
+vaccine = (dat_bind[trainRows, -1]) %>% 
+  ggplot(aes(x = vaccine)) + geom_bar() + labs(x = "Vaccination status",
+                                               y = "Count")
+severity = (dat_bind[trainRows, -1]) %>% 
+  ggplot(aes(x = severity)) + geom_bar() + labs(x = "Severity", y = "Count")
+
+study = (dat_bind[trainRows, -1]) %>% 
+  ggplot(aes(x = study)) + geom_bar() + labs(x = "Study Site", y = "Count")
+
+cat_combined_plot = ggarrange(gender, race, smoking, hypertension, 
+                               diabetes, vaccine,severity, study,
+                          ncol = 2, nrow = 4)
+
+cat_combined_plot
+```
+
+
+## Understand continuous variables
+```{r warning=FALSE, message=FALSE}
+par(mar = c(3, 3, 2, 2), mfrow = c(2, 3))
+
+age = hist(dat_bind$age[trainRows], breaks = 50)
+
+bmi = hist(dat_bind$bmi[trainRows], breaks = 50)
+
+height = hist(dat_bind$height[trainRows], breaks = 50)
+
+weight = hist(dat_bind$weight[trainRows], breaks = 50)
+
+SBP = hist(dat_bind$SBP[trainRows], breaks = 50)
+
+LDL = hist(dat_bind$LDL[trainRows], breaks = 50)
+```
+
+
+## Understand the correlation between continuous predictors ****
+```{r warning=FALSE, message=FALSE}
+correlation <- model.matrix(lrecovery_time ~ ., dat_bind)[trainRows,-1]
+
+corrplot(cor(correlation), method = "circle", type = "full")
+```
+
+
+## Understand the relationship with continuous predictors and the outcome
+```{r warning=FALSE, message=FALSE}
+theme1 <- trellis.par.get()
+theme1$plot.symbol$col <- rgb(.2, .4, .2, .5)
+theme1$plot.symbol$pch <- 16
+theme1$plot.line$col <- rgb(.8, .1, .1, 1)
+theme1$plot.line$lwd <- 2
+theme1$strip.background$col <- rgb(.0, .2, .6, .2)
+trellis.par.set(theme1)
+
+# plotting continuous predictors 
+featurePlot(x = model.matrix(lrecovery_time ~ ., dat_bind)[trainRows,c("age", "SBP", "LDL", "height", "weight", "bmi")],
+            y = dat_bind$lrecovery_time[trainRows],
+            plot = "scatter",
+            span = .5,
+            labels = c("Predictors","Y"),
+            type = c("p", "smooth"),
+            layout = c(3,2))
+```
+
+
+## Considering variables based on the EDA
+
+From the correlation plot, we can observe that `bmi` is highly correlated with `weight` and `height`, which makes sense because BMI is calculated by weight divided by the square of height. This demonstrates collinearity between the variables, and to account for this, I will remove the `bmi` variable for the predictions. 
+
+Also, I believe that the `study` variable is more of a geographical indicator to distinguish different study sites, and it will not be critical in predicting recovery time. Therefore, I will also remove  the `study` variable. 
+
+Lastly, I will remove variables `race` and `smoking` since I have created dummy variables for them and I will use the dummy variables in further analyses.
+
+```{r warning=FALSE, message=FALSE}
+final = dat_bind %>% 
+  mutate(
+  # create dummy variables for categorical variables
+    # set up 3 dummy variables for `race`, reference = White:
+         race_2 = ifelse(race == 2, 1, 0), 
+         race_3 = ifelse(race == 3, 1, 0),
+         race_4 = ifelse(race == 4, 1, 0),
+    # set up 2 dummy variables for `smoking`, reference = Never smoked:
+         smoking_1 = ifelse(smoking == 1, 1, 0), 
+         smoking_2 = ifelse(smoking == 2, 1, 0)) 
+
+# remove variables that will not be used
+final = final %>% 
+  select(-bmi, -study, -race, -smoking) 
+
+# partition again based on the new outcome variable
+set.seed(2460)
+
+trainRows_new <- createDataPartition(y = final$lrecovery_time, p = 0.8, list = FALSE)
+
+x <- model.matrix(lrecovery_time ~ ., final)[trainRows_new,-1]
+
+y <- final$lrecovery_time[trainRows_new]
+
+x2 <- model.matrix(lrecovery_time ~ ., final)[-trainRows_new,-1]
+
+y2 <- final$lrecovery_time[-trainRows_new]
+
+ctrl1 <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
+```
+
+
+
 
 
