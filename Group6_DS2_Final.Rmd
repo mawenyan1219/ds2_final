@@ -213,9 +213,7 @@ ctrl1 <- trainControl(method = "cv")
 
 # Primary analysis: continuous time to recovery
 
-## Mode 1: linear model
-
-### Train the model
+## Model 1: Linear model
 ```{r warning=FALSE, message=FALSE}
 set.seed(2460)
 
@@ -227,10 +225,7 @@ lm.fit <- train(x, y,
 summary(lm.fit)
 ```
 
-
 ## Model 2: Ridge
-
-### Train the model
 ```{r warning=FALSE, message=FALSE}
 set.seed(2460)
 
