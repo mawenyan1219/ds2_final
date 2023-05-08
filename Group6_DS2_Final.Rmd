@@ -487,8 +487,8 @@ set.seed(2460)
 trainRows_sec <- createDataPartition(y = secondary$brecovery_time, p = 0.8, list = FALSE)
 
 ctrl2 <- trainControl(method = "cv", 
-                     summaryFunction = twoClassSummary,
-                     classProbs = TRUE)
+                      summaryFunction = twoClassSummary,
+                      classProbs = TRUE)
 
 contrasts(secondary$brecovery_time)
 ```
@@ -555,8 +555,8 @@ ggplot(model.rpart, highlight = TRUE)
 ## Model 5: Random forrest
 ```{r}
 rf.grid.sec <- expand.grid(mtry = 1:16,
-                       splitrule = "gini",
-                       min.node.size = seq(from = 2, to = 10, by = 2))
+                           splitrule = "gini",
+                           min.node.size = seq(from = 2, to = 10, by = 2))
 
 set.seed(2460)
 
@@ -595,11 +595,11 @@ ggplot(model.gbmA, highlight = TRUE)
 ## Model comparison
 ```{r warning=FALSE, message=FALSE}
 res_sec <- resamples(list(GLM = model.glm,
-                      MARS = model.mars,
-                      LDA = model.lda,
-                      tree = model.rpart,
-                      rf = model.rf,
-                      boosting = model.gbmA))
+                          MARS = model.mars,
+                          LDA = model.lda,
+                          tree = model.rpart,
+                          rf = model.rf,
+                          boosting = model.gbmA))
 
 summary(res_sec)
 
