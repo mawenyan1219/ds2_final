@@ -436,7 +436,8 @@ vip(mars.fit,
 ```{r warning=FALSE, message=FALSE}
 pdp1 <- mars.fit %>%
   partial(pred.var = c("bmi")) %>%
-  autoplot(train = primary[trainRows,], rug = TRUE)
+  autoplot(train = primary[trainRows,], rug = TRUE, 
+           xlab = "BMI", ylab = "Predicted Recovery Time") 
 
 pdp1
 ```
