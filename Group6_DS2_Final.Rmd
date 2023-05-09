@@ -25,7 +25,7 @@ library(randomForest)
 library(ranger)
 library(gbm)
 
-setwd("D:/CUMC/Y2S2/DS2/Final/ds2_final")
+# setwd("D:/CUMC/Y2S2/DS2/Final/ds2_final")
 
 load("./recovery.RData") 
 ```
@@ -63,7 +63,7 @@ trainRows <- createDataPartition(y = dat_bind$recovery_time,
 hist(dat_bind$recovery_time[trainRows], breaks = 50)
 ```
 
-The distribution of the outcome variable `recovery_time` is heavily right-skewed. To account for this, I will take the log-transformation of the outcome and use that variable for following analyses.
+The distribution of the outcome variable `recovery_time` is heavily right-skewed. To account for this, we will take the log-transformation of the outcome and use that variable for following analyses.
 
 
 ```{r warning=FALSE, message=FALSE}
@@ -214,9 +214,9 @@ cat_combined_plot3
 
 From the correlation plot, we can observe that `bmi` is highly correlated with `weight` and `height`, which makes sense because BMI is calculated by weight divided by the square of height. This demonstrates collinearity between the variables.
 
-I believe that the `study` variable is more of a geographical indicator to distinguish different study sites, and it will not be critical in predicting recovery time. Therefore, I will remove  the `study` variable. 
+We believe that the `study` variable is more of a geographical indicator to distinguish different study sites, and it will not be critical in predicting recovery time. Therefore, we will remove  the `study` variable. 
 
-Lastly, I will remove variables `race` and `smoking` since I have created dummy variables for them and I will use the dummy variables in further analyses.
+Lastly, we will remove variables `race` and `smoking` since we have created dummy variables for them and we will use the dummy variables in further analyses.
 
 ```{r warning=FALSE, message=FALSE}
 primary = dat_bind_primary %>% 
@@ -514,13 +514,13 @@ binary
 # partition again based on the new outcome variable
 set.seed(2460)
 
-trainRows_sec <- createDataPartition(y = secondary$brecovery_time, p = 0.8, list = FALSE)
+trainRows_sec <- createDataPartition(y = dat_bind_secondary$brecovery_time, p = 0.8, list = FALSE)
 
 ctrl2 <- trainControl(method = "cv", 
                       summaryFunction = twoClassSummary,
                       classProbs = TRUE)
 
-contrasts(secondary$brecovery_time)
+contrasts(dat_bind_secondary$brecovery_time)
 ```
 
 ## Understand the relationship between continuous predictors and the binary outcome
@@ -580,7 +580,6 @@ cat_combined_plot2 = ggarrange(gender2, race2, smoking2, hypertension2,
 
 cat_combined_plot2
 ```
-
 
 ```{r}
 # dummy variable creation
@@ -710,8 +709,6 @@ model.gbmA <- train(brecovery_time ~ . , secondary,
 
 ggplot(model.gbmA, highlight = TRUE)
 ```
-
-
 
 ## Model comparison
 ```{r warning=FALSE, message=FALSE}
