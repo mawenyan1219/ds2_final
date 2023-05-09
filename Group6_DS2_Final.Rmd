@@ -433,6 +433,8 @@ rpart.fit <- train(lrecovery_time ~ . ,
                    trControl = ctrl1,
                    preProcess = c("center", "scale"))
 
+rpart.fit$bestTune
+
 ggplot(rpart.fit, highlight = TRUE)
 
 rpart.plot(rpart.fit$finalModel)
@@ -453,6 +455,8 @@ rf.fit <- train(lrecovery_time ~ . ,
                 tuneGrid = rf.grid,
                 trControl = ctrl1,
                 preProcess = c("center", "scale"))
+
+rf.fit$bestTune
 
 ggplot(rf.fit, highlight = TRUE)
 ```
@@ -497,6 +501,8 @@ gbm.fit <- train(lrecovery_time ~ . ,
                  trControl = ctrl1,
                  preProcess = c("center", "scale"),
                  verbose = F)
+
+gbm.fit$bestTune
 
 ggplot(gbm.fit, highlight = T)
 ```
@@ -613,6 +619,7 @@ cat_combined_plot2 = ggarrange(gender2, race2, smoking2, hypertension2,
 cat_combined_plot2
 ```
 
+## Make dummy variables
 ```{r warning=FALSE, message=FALSE}
 # dummy variable creation
 
@@ -694,6 +701,8 @@ model.rpart <- train(brecovery_time ~ . , secondary,
                      metric = "ROC",
                      preProcess = c("center", "scale"))
 
+model.rpart$bestTune
+
 ggplot(model.rpart, highlight = TRUE)
 
 rpart.plot(model.rpart$finalModel)
@@ -740,6 +749,8 @@ model.gbmA <- train(brecovery_time ~ . , secondary,
                     verbose = FALSE)
 
 ggplot(model.gbmA, highlight = TRUE)
+
+model.gbmA$bestTune
 ```
 
 ## Model comparison
