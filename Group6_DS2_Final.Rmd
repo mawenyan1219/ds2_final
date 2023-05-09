@@ -411,11 +411,11 @@ gbm.grid <- expand.grid(n.trees = c(750,1000,1500,2000,2500,3000,3500),
 set.seed(2460)
 
 gbm.fit <- train(lrecovery_time ~ . ,
-                primary[trainRows_pri,],
-                method = "gbm",
-                tuneGrid = gbm.grid,
-                trControl = ctrl1,
-                verbose = F)
+                 primary[trainRows_pri,],
+                 method = "gbm",
+                 tuneGrid = gbm.grid,
+                 trControl = ctrl1,
+                 verbose = F)
 
 ggplot(gbm.fit, highlight = T)
 ```
@@ -424,15 +424,15 @@ ggplot(gbm.fit, highlight = T)
 ## Model comparison
 ```{r warning=FALSE, message=FALSE}
 res_pri <- resamples(list(lm = lm.fit, 
-                      ridge = ridge.fit,
-                      lasso = lasso.fit,
-                      enet = enet.fit,
-                      pls = pls.fit,
-                      gam = gam.fit,
-                      mars = mars.fit,
-                      reg.tree = rpart.fit,
-                      rt = rf.fit,
-                      boosting = gbm.fit))
+                          ridge = ridge.fit,
+                          lasso = lasso.fit,
+                          enet = enet.fit,
+                          pls = pls.fit,
+                          gam = gam.fit,
+                          mars = mars.fit,
+                          reg.tree = rpart.fit,
+                          rt = rf.fit,
+                          boosting = gbm.fit))
 
 summary(res_pri)
 
@@ -549,7 +549,7 @@ ggplot(model.rpart, highlight = TRUE)
 
 ## Model 5: Random forrest
 ```{r}
-rf.grid.sec <- expand.grid(mtry = 1:16,
+rf.grid.sec <- expand.grid(mtry = 1:15,
                            splitrule = "gini",
                            min.node.size = seq(from = 2, to = 10, by = 2))
 
@@ -586,21 +586,53 @@ model.gbmA <- train(brecovery_time ~ . , secondary,
 ggplot(model.gbmA, highlight = TRUE)
 ```
 
+## Model 7: Support vector classifier (linear kernel)
+```{r warning=FALSE, message=FALSE}
+set.seed(2460)
+
+model.svml <- train(brecovery_time ~ . , 
+                    data = secondary[trainRows_sec,],
+                    method = "svmLinear2",
+                    tuneGrid = data.frame(cost = exp(seq(-10, -1,len=50))),
+                    trControl = ctrl1)
+
+plot(model.svml, highlight = TRUE, xTrans = log)
+```
+
+## Model 8: Support vector machine (radial kernel)
+```{r warning=FALSE, message=FALSE, eval=FALSE}
+svmr.grid <- expand.grid(C = exp(seq(1,7,len=50)),
+                         sigma = exp(seq(-10,-2,len=20)))
+
+set.seed(2460)
+
+model.svmr <- train(brecovery_time ~ . , secondary,
+                     subset = trainRows_sec,
+                     method = "svmRadialSigma",
+                     tuneGrid = svmr.grid,
+                     trControl = ctrl1)
+
+myCol <- rainbow(25)
+
+myPar <- list(superpose.symbol = list(col = myCol),
+              superpose.line = list(col = myCol))
+
+plot(model.svmr, highlight = TRUE, par.settings = myPar)
+```
+
 
 ## Model comparison
 ```{r warning=FALSE, message=FALSE}
-res_sec <- resamples(list(GLM = model.glm,
-                          MARS = model.mars,
-                          LDA = model.lda,
-                          tree = model.rpart,
+res_sec <- resamples(list(logistic = model.glm,
+                          mars = model.mars,
+                          lda = model.lda,
+                          classification.tree = model.rpart,
                           rf = model.rf,
-                          boosting = model.gbmA))
+                          boosting = model.gbmA,
+                          linear.kernel = model.svml))
 
 summary(res_sec)
 
 bwplot(res_sec, metric = "ROC")
 ```
-
-
-
 
