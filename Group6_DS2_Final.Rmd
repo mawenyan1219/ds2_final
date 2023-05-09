@@ -95,7 +95,8 @@ gender = (dat_bind_primary[trainRows, -1]) %>%
   ggplot(aes(x = gender)) +  geom_bar() +  labs(x = "Gender", y = "Count")
 
 race = (dat_bind_primary[trainRows, -1]) %>% 
-  ggplot(aes(x = race)) + geom_bar() + labs(x = "Race",y = "Count")
+  ggplot(aes(x = race)) + geom_bar() + labs(x = "Race",y = "Count") +
+  scale_x_discrete(labels = c("White", "Asian", "Black", "Hispanic"))
 
 smoking = (dat_bind_primary[trainRows, -1]) %>% 
   ggplot(aes(x = smoking)) + geom_bar() + labs(x = "Smoking", y = "Count")
@@ -164,9 +165,48 @@ featurePlot(x = model.matrix(lrecovery_time ~ ., dat_bind_primary)[trainRows,c("
             y = dat_bind_primary$lrecovery_time[trainRows],
             plot = "scatter",
             span = .5,
-            labels = c("Predictors","Y"),
+            labels = c("Predictors","Log(Y)"),
             type = c("p", "smooth"),
             layout = c(3,2))
+```
+
+## Understand the relationship between categorical predictors and continuous outcome
+```{r}
+gender3 = (dat_bind_primary[trainRows, -1]) %>% 
+  ggplot(aes(x = as.factor(gender), y = lrecovery_time)) + geom_boxplot() + labs(x = "Gender", y = "Log Recovery Time") + scale_x_discrete(labels = c("Female", "Male"))
+
+race3 = (dat_bind_primary[trainRows, -1]) %>% 
+  ggplot(aes(x = as.factor(race), y = lrecovery_time)) + geom_boxplot() + labs(x = "Race", y = "Log Recovery Time") +
+  scale_x_discrete(labels = c("White", "Asian", "Black", "Hispanic"))
+
+smoking3 = (dat_bind_primary[trainRows, -1]) %>% 
+  ggplot(aes(x = as.factor(smoking), y = lrecovery_time)) + geom_boxplot() + labs(x = "Smokoing Status", y = "Log Recovery Time") +
+  scale_x_discrete(labels = c("Never smoked", "Former Smoker", "Current smoker"))
+
+hypertension3 = (dat_bind_primary[trainRows, -1]) %>% 
+  ggplot(aes(x = as.factor(hypertension), y = lrecovery_time)) + geom_boxplot() + labs(x = "Hypertension Status", y = "Log Recovery Time") +
+  scale_x_discrete(labels = c("No", "Yes"))
+
+diabetes3 = (dat_bind_primary[trainRows, -1]) %>% 
+  ggplot(aes(x = as.factor(diabetes), y = lrecovery_time)) + geom_boxplot() + labs(x = "Diabetes Status", y = "Log Recovery Time") +
+  scale_x_discrete(labels = c("No", "Yes"))
+
+vaccine3 = (dat_bind_primary[trainRows, -1]) %>% 
+  ggplot(aes(x = as.factor(vaccine), y = lrecovery_time)) + geom_boxplot() + labs(x = "Vaccination Status", y = "Log Recovery Time") +
+  scale_x_discrete(labels = c("No", "Yes"))
+
+severity3 = (dat_bind_primary[trainRows, -1]) %>% 
+  ggplot(aes(x = as.factor(severity), y = lrecovery_time)) + geom_boxplot() + labs(x = "Severity", y = "Log Recovery Time") +
+  scale_x_discrete(labels = c("Not severe", "Severe"))
+
+study3 = (dat_bind_primary[trainRows, -1]) %>% 
+  ggplot(aes(x = as.factor(study), y = lrecovery_time)) + geom_boxplot() + labs(x = "Study", y = "Log Recovery Time")
+
+cat_combined_plot3 = ggarrange(gender3, race3, smoking3, hypertension3, 
+                               diabetes3, vaccine3, severity3, study3,
+                          ncol = 2, nrow = 4)
+
+cat_combined_plot3
 ```
 
 
@@ -195,17 +235,13 @@ primary = primary %>%
   select(-study, -race, -smoking) 
 
 # partition again based on the new outcome variable
-set.seed(2460)
+x <- model.matrix(lrecovery_time ~ ., primary)[trainRows,-1]
 
-trainRows_pri <- createDataPartition(y = primary$lrecovery_time, p = 0.8, list = FALSE)
+y <- primary$lrecovery_time[trainRows]
 
-x <- model.matrix(lrecovery_time ~ ., primary)[trainRows_pri,-1]
+x2 <- model.matrix(lrecovery_time ~ ., primary)[-trainRows,-1]
 
-y <- primary$lrecovery_time[trainRows_pri]
-
-x2 <- model.matrix(lrecovery_time ~ ., primary)[-trainRows_pri,-1]
-
-y2 <- primary$lrecovery_time[-trainRows_pri]
+y2 <- primary$lrecovery_time[-trainRows]
 
 ctrl1 <- trainControl(method = "cv")
 ```
@@ -384,7 +420,7 @@ coef(mars.fit$finalModel) %>% round(2) %>%
 set.seed(2460)
 
 rpart.fit <- train(lrecovery_time ~ . ,
-                   primary[trainRows_pri,],
+                   primary[trainRows,],
                    method = "rpart",
                    tuneGrid = data.frame(cp = exp(seq(-9,-4, length = 50))),
                    trControl = ctrl1)
@@ -404,7 +440,7 @@ rf.grid <- expand.grid(mtry = 1:16, #16 predictors
 set.seed(2460)
 
 rf.fit <- train(lrecovery_time ~ . ,
-                primary[trainRows_pri,],
+                primary[trainRows,],
                 method = "ranger",
                 tuneGrid = rf.grid,
                 trControl = ctrl1)
@@ -423,7 +459,7 @@ gbm.grid <- expand.grid(n.trees = c(750,1000,1500,2000,2500,3000,3500),
 set.seed(2460)
 
 gbm.fit <- train(lrecovery_time ~ . ,
-                 primary[trainRows_pri,],
+                 primary[trainRows,],
                  method = "gbm",
                  tuneGrid = gbm.grid,
                  trControl = ctrl1,
@@ -467,10 +503,84 @@ dat_bind_secondary = dat_bind %>%
   dplyr::select(-recovery_time, -id) 
   
 # lets check the distribution
-binary = (dat_bind_secondary[trainRows, -1]) %>% 
+binary = dat_bind_secondary %>% 
   ggplot(aes(x = brecovery_time)) + geom_bar() 
 
 binary
+
+# partition again based on the new outcome variable
+set.seed(2460)
+
+trainRows_sec <- createDataPartition(y = secondary$brecovery_time, p = 0.8, list = FALSE)
+
+ctrl2 <- trainControl(method = "cv", 
+                      summaryFunction = twoClassSummary,
+                      classProbs = TRUE)
+
+contrasts(secondary$brecovery_time)
+```
+
+## Understand the relationship between continuous predictors and the binary outcome
+```{r warning=FALSE, message=FALSE}
+theme1 <- trellis.par.get()
+theme1$plot.symbol$col <- rgb(.2, .4, .2, .5)
+theme1$plot.symbol$pch <- 16
+theme1$plot.line$col <- rgb(.8, .1, .1, 1)
+theme1$plot.line$lwd <- 2
+theme1$strip.background$col <- rgb(.0, .2, .6, .2)
+trellis.par.set(theme1)
+
+# plotting continuous predictors 
+featurePlot(x = model.matrix(brecovery_time ~ ., dat_bind_secondary)[trainRows_sec,c("age", "SBP", "LDL", "height", "weight", "bmi")],
+            y = dat_bind_secondary$brecovery_time[trainRows_sec],
+            plot = "box",
+            span = .5,
+            labels = c("Recovery Time","Y"),
+            layout = c(3,2))
+```
+
+## Understand the relationship between categorical predictors and the binary outcome
+```{r}
+gender2 = (dat_bind_secondary[trainRows_sec, -1]) %>% 
+  ggplot(aes(x = brecovery_time, fill = as.factor(gender), group = as.factor(gender))) + geom_bar(position = "dodge") + labs(x = "Recovery Time", y = "Count", fill = "Gender")
+
+race2 = (dat_bind_secondary[trainRows_sec, -1]) %>% 
+  ggplot(aes(x = brecovery_time, fill = as.factor(race), group = as.factor(race))) + geom_bar(position = "dodge") + labs(x = "Recovery Time", y = "Count", fill = "Race") +
+  scale_fill_discrete(labels = c("White", "Asian", "Black", "Hispanic"))
+
+smoking2 = (dat_bind_secondary[trainRows_sec, -1]) %>% 
+  ggplot(aes(x = brecovery_time, fill = as.factor(smoking), group = as.factor(smoking))) + geom_bar(position = "dodge") + labs(x = "Recovery Time", y = "Count", fill = "Smoking Status") +
+  scale_fill_discrete(labels = c("Never smoked", "Former Smoker", "Current smoker"))
+
+hypertension2 = (dat_bind_secondary[trainRows_sec, -1]) %>% 
+  ggplot(aes(x = brecovery_time, fill = as.factor(hypertension), group = as.factor(hypertension))) + geom_bar(position = "dodge") + labs(x = "Recovery Time", y = "Count", fill = "Hypertension") +
+  scale_fill_discrete(labels = c("No", "Yes"))
+
+diabetes2 = (dat_bind_secondary[trainRows_sec, -1]) %>% 
+  ggplot(aes(x = brecovery_time, fill = as.factor(diabetes), group = as.factor(diabetes))) + geom_bar(position = "dodge") + labs(x = "Recovery Time", y = "Count", fill = "Diabetes") +
+  scale_fill_discrete(labels = c("No", "Yes"))
+
+vaccine2 = (dat_bind_secondary[trainRows_sec, -1]) %>% 
+  ggplot(aes(x = brecovery_time, fill = as.factor(vaccine), group = as.factor(vaccine))) + geom_bar(position = "dodge") + labs(x = "Recovery Time", y = "Count", fill = "Vaccination") +
+  scale_fill_discrete(labels = c("No", "Yes"))
+
+severity2 = (dat_bind_secondary[trainRows_sec, -1]) %>% 
+  ggplot(aes(x = brecovery_time, fill = as.factor(severity), group = as.factor(severity))) + geom_bar(position = "dodge") + labs(x = "Recovery Time", y = "Count", fill = "Severity") +
+  scale_fill_discrete(labels = c("Not severe", "Severe"))
+
+study2 = (dat_bind_secondary[trainRows_sec, -1]) %>% 
+  ggplot(aes(x = brecovery_time, fill = as.factor(study), group = as.factor(study))) + geom_bar(position = "dodge") + labs(x = "Recovery Time", y = "Count", fill = "Study")
+
+cat_combined_plot2 = ggarrange(gender2, race2, smoking2, hypertension2, 
+                               diabetes2, vaccine2, severity2, study2,
+                          ncol = 2, nrow = 4)
+
+cat_combined_plot2
+```
+
+
+```{r}
+# dummy variable creation
 
 secondary = dat_bind_secondary %>% 
   mutate(
@@ -487,37 +597,6 @@ secondary = dat_bind_secondary %>%
 secondary = secondary %>% 
   dplyr::select(-study, -race, -smoking) %>% 
   dplyr::select(brecovery_time, everything()) #arrange variable orders
-
-# partition again based on the new outcome variable
-set.seed(2460)
-
-trainRows_sec <- createDataPartition(y = secondary$brecovery_time, p = 0.8, list = FALSE)
-
-ctrl2 <- trainControl(method = "cv", 
-                      summaryFunction = twoClassSummary,
-                      classProbs = TRUE)
-
-contrasts(secondary$brecovery_time)
-```
-
-
-## Understand the relationship with continuous predictors and the binary outcome
-```{r warning=FALSE, message=FALSE}
-theme1 <- trellis.par.get()
-theme1$plot.symbol$col <- rgb(.2, .4, .2, .5)
-theme1$plot.symbol$pch <- 16
-theme1$plot.line$col <- rgb(.8, .1, .1, 1)
-theme1$plot.line$lwd <- 2
-theme1$strip.background$col <- rgb(.0, .2, .6, .2)
-trellis.par.set(theme1)
-
-# plotting continuous predictors 
-featurePlot(x = model.matrix(brecovery_time ~ ., secondary)[trainRows_sec,c("age", "SBP", "LDL", "height", "weight", "bmi")],
-            y = secondary$brecovery_time[trainRows_sec],
-            plot = "box",
-            span = .5,
-            labels = c("Recovery Time","Y"),
-            layout = c(3,2))
 ```
 
 
