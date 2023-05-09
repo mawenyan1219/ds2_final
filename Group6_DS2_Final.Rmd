@@ -235,7 +235,7 @@ set.seed(2460)
 ridge.fit <- train(x, y,
                    method = "glmnet",
                    tuneGrid = expand.grid(alpha = 0,
-                                          lambda = exp(seq(-2, -8, length=100))),
+                                          lambda = exp(seq(-2, -8, length = 100))),
                    preProc = c("center", "scale"),
                    trControl = ctrl1)
 
@@ -310,7 +310,7 @@ ggplot(pls.fit, highlight = TRUE) + theme_bw()
 
 summary(pls.fit)
 
-coef(pls.fit$finalModel)%>% 
+coef(pls.fit$finalModel) %>% 
   as.matrix() %>% as.data.frame() %>% View()
 ```
 
@@ -497,6 +497,27 @@ ctrl2 <- trainControl(method = "cv",
 contrasts(secondary$brecovery_time)
 ```
 
+
+## Understand the relationship with continuous predictors and the binary outcome
+```{r warning=FALSE, message=FALSE}
+theme1 <- trellis.par.get()
+theme1$plot.symbol$col <- rgb(.2, .4, .2, .5)
+theme1$plot.symbol$pch <- 16
+theme1$plot.line$col <- rgb(.8, .1, .1, 1)
+theme1$plot.line$lwd <- 2
+theme1$strip.background$col <- rgb(.0, .2, .6, .2)
+trellis.par.set(theme1)
+
+# plotting continuous predictors 
+featurePlot(x = model.matrix(brecovery_time ~ ., secondary)[trainRows_sec,c("age", "SBP", "LDL", "height", "weight", "bmi")],
+            y = secondary$brecovery_time[trainRows_sec],
+            plot = "box",
+            span = .5,
+            labels = c("Recovery Time","Y"),
+            layout = c(3,2))
+```
+
+
 ## Model 1: Logistic regression
 ```{r warning=FALSE, message=FALSE}
 set.seed(2460)
@@ -606,7 +627,7 @@ set.seed(2460)
 model.svml <- train(brecovery_time ~ . , 
                     data = secondary[trainRows_sec,],
                     method = "svmLinear2",
-                    tuneGrid = data.frame(cost = exp(seq(-50, 5,len=100))),
+                    tuneGrid = data.frame(cost = exp(seq(-50, 5,len = 100))),
                     trControl = ctrl1,
                     tuneLength = 10000)
 
