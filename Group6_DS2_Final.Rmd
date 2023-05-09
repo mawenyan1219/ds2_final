@@ -684,6 +684,25 @@ model.mars$bestTune
 coef(model.mars$finalModel)
 ```
 
+### Partial dependence
+```{r warning=FALSE, message=FALSE}
+pdp2 <- pdp::partial(model.mars, 
+                     pred.var = c("bmi"),
+                     grid.resolution = 10) %>% 
+  plotPartial(train = secondary[trainRows_sec,], rug = TRUE,
+           xlab = "BMI", ylab = "Predicted Recovery Time")
+                     
+pdp2                     
+
+partial_plot <- partial(model.mars, pred.var = "bmi")
+
+# Plot the partial dependence curve
+plotPartial(partial_plot)
+
+```
+
+
+
 ## Model 3: LDA
 ```{r warning=FALSE, message=FALSE}
 set.seed(2460)
@@ -776,3 +795,16 @@ summary(res_sec)
 bwplot(res_sec, metric = "ROC")
 ```
 
+## Select final model 
+
+Since MARS model has the highest mean AUC ROC, we selected it as our final model. 
+
+### Test error
+```{r warning=FALSE, message=FALSE}
+pred.mars <- predict(model.mars, newdata = secondary[-trainRows_sec,])
+
+confusionMatrix(data = pred.mars, reference = secondary$brecovery_time[-trainRows_sec],
+                positive = "Long")
+```
+
+The accuracy of the MARS model was 0.6866. The misclassification (test error) is calculated as 1 - 0.6866 = 0.3134.
