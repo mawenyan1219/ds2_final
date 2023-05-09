@@ -24,8 +24,10 @@ library(rpart.plot)
 library(randomForest)
 library(ranger)
 library(gbm)
+library(pdp)
+library(vip)
 
-# setwd("D:/CUMC/Y2S2/DS2/Final/ds2_final")
+setwd("D:/CUMC/Y2S2/DS2/Final/ds2_final")
 
 load("./recovery.RData") 
 ```
@@ -171,7 +173,7 @@ featurePlot(x = model.matrix(lrecovery_time ~ ., dat_bind_primary)[trainRows,c("
 ```
 
 ## Understand the relationship between categorical predictors and continuous outcome
-```{r}
+```{r warning=FALSE, message=FALSE}
 gender3 = (dat_bind_primary[trainRows, -1]) %>% 
   ggplot(aes(x = as.factor(gender), y = lrecovery_time)) + geom_boxplot() + labs(x = "Gender", y = "Log Recovery Time") + scale_x_discrete(labels = c("Female", "Male"))
 
@@ -414,6 +416,11 @@ coef(mars.fit$finalModel) %>% round(2) %>%
   as.matrix() %>% as.data.frame() %>% View()
 ```
 
+### Partial dependence
+```{r warning=FALSE, message=FALSE}
+pdp::partial(mars.fit, pred.var = c("age"), grid.resolution = 200) %>% autoplot()
+```
+
 
 ## Model 8: Regression tree
 ```{r warning=FALSE, message=FALSE}
@@ -448,6 +455,29 @@ rf.fit <- train(lrecovery_time ~ . ,
                 preProcess = c("center", "scale"))
 
 ggplot(rf.fit, highlight = TRUE)
+```
+
+### Variable importance
+```{r warning=FALSE, message=FALSE}
+vip(rf.fit,
+    method = "permute",
+    train = primary[trainRows,],
+    target = "lrecovery_time",
+    metric = "RMSE",
+    nsim = 10,
+    pred_wrapper = predict,
+    geom = "boxplot",
+    all_permutations = TRUE,
+    mapping = aes_string(fill = "Variable"))
+```
+
+### Partial dependence
+```{r warning=FALSE, message=FALSE}
+pdp1.rf <- rf.fit %>%
+  partial(pred.var = c("bmi")) %>%
+  autoplot(train = primary[trainRows,], rug = TRUE)
+
+pdp1.rf
 ```
 
 
@@ -543,9 +573,11 @@ featurePlot(x = model.matrix(brecovery_time ~ ., dat_bind_secondary)[trainRows_s
 ```
 
 ## Understand the relationship between categorical predictors and the binary outcome
-```{r}
+```{r warning=FALSE, message=FALSE}
 gender2 = (dat_bind_secondary[trainRows_sec, -1]) %>% 
-  ggplot(aes(x = brecovery_time, fill = as.factor(gender), group = as.factor(gender))) + geom_bar(position = "dodge") + labs(x = "Recovery Time", y = "Count", fill = "Gender")
+  ggplot(aes(x = brecovery_time, fill = as.factor(gender), group = as.factor(gender))) + geom_bar(position = "dodge") + labs(x = "Recovery Time", y = "Count", fill = "Gender") +
+  scale_fill_discrete(labels = c("Female", "Male"))
+
 
 race2 = (dat_bind_secondary[trainRows_sec, -1]) %>% 
   ggplot(aes(x = brecovery_time, fill = as.factor(race), group = as.factor(race))) + geom_bar(position = "dodge") + labs(x = "Recovery Time", y = "Count", fill = "Race") +
@@ -581,7 +613,7 @@ cat_combined_plot2 = ggarrange(gender2, race2, smoking2, hypertension2,
 cat_combined_plot2
 ```
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 # dummy variable creation
 
 secondary = dat_bind_secondary %>% 
@@ -668,7 +700,7 @@ rpart.plot(model.rpart$finalModel)
 ```
 
 ## Model 5: Random forest
-```{r}
+```{r warning=FALSE, message=FALSE}
 rf.grid.sec <- expand.grid(mtry = 1:16,
                            splitrule = "gini",
                            min.node.size = seq(from = 2, to = 10, by = 2))
