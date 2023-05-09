@@ -232,7 +232,7 @@ set.seed(2460)
 ridge.fit <- train(x, y,
                    method = "glmnet",
                    tuneGrid = expand.grid(alpha = 0,
-                                          lambda = exp(seq(-1, -7, length=100))),
+                                          lambda = exp(seq(-2, -8, length=100))),
                    preProc = c("center", "scale"),
                    trControl = ctrl1)
 
@@ -251,7 +251,7 @@ set.seed(2460)
 lasso.fit <- train(x, y, 
                    method = "glmnet", 
                    tuneGrid = expand.grid(alpha = 1, 
-                                          lambda = exp(seq(-9, -3, length = 100))),
+                                          lambda = exp(seq(-15, -6, length = 100))),
                    preProcess = c("center", "scale"),
                    trControl = ctrl1)
 
@@ -270,7 +270,8 @@ set.seed(2460)
 enet.fit <- train(x, y, 
                   method = "glmnet", 
                   tuneGrid = expand.grid(alpha = seq(0, 1, length = 21), 
-                                         lambda = exp(seq(-8, 1, length = 100))), 
+                                         lambda = exp(seq(-12, -2, 
+                                                          length = 100))), 
                   preProcess = c("center", "scale"),
                   trControl = ctrl1)
 
@@ -293,7 +294,7 @@ set.seed(2460)
 
 pls.fit <- train(x, y,
                  method = "pls",
-                 tuneGrid = data.frame(ncomp = 1:15),
+                 tuneGrid = data.frame(ncomp = 1:16),
                  trControl = ctrl1,
                  preProcess = c("center", "scale"))
 
