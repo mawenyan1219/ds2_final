@@ -70,7 +70,7 @@ The distribution of the outcome variable `recovery_time` is heavily right-skewed
 dat_bind_primary = dat_bind %>% 
   na.omit(dat_bind) %>% 
   mutate(lrecovery_time = log(recovery_time)) %>% 
-  select(-recovery_time, -id) 
+  dplyr::select(-recovery_time, -id) 
   
 # log-transformation helped with making it more normal
 hist(dat_bind_primary$lrecovery_time[trainRows], breaks = 50)
@@ -147,7 +147,7 @@ correlation <- model.matrix(lrecovery_time ~ ., dat_bind_primary)[trainRows,-1]
 
 corrplot(cor(correlation), method = "circle", type = "full")
 
-corrplot(cor(dat[indexTrain,c(1,5,6,7,10,11)]), method = "circle", type = "full")
+corrplot(cor(dat_bind_primary[trainRows,c(1,5,6,7,10,11)]), method = "circle", type = "full")
 ```
 
 
@@ -452,9 +452,9 @@ dat_bind_secondary = dat_bind %>%
   na.omit(dat_bind) %>% 
   mutate(brecovery_time = ifelse(recovery_time > 30, 1, 0)) %>% 
   mutate(brecovery_time = as.factor(brecovery_time)) %>% 
-  mutate(brecovery_time = recode(brecovery_time, 
+  mutate(brecovery_time = dplyr::recode(brecovery_time, 
                                  "1" = "Long", "0" = "Short")) %>% 
-  select(-recovery_time, -id) 
+  dplyr::select(-recovery_time, -id) 
   
 # lets check the distribution
 binary = (dat_bind_secondary[trainRows, -1]) %>% 
@@ -475,8 +475,8 @@ secondary = dat_bind_secondary %>%
 
 # remove variables that will not be used
 secondary = secondary %>% 
-  select(-bmi, -study, -race, -smoking) %>% 
-  select(brecovery_time, everything()) #arrange variable orders
+  dplyr::select(-bmi, -study, -race, -smoking) %>% 
+  dplyr::select(brecovery_time, everything()) #arrange variable orders
 
 # partition again based on the new outcome variable
 set.seed(2460)
@@ -542,14 +542,14 @@ set.seed(2460)
 model.rpart <- train(brecovery_time ~ . , secondary, 
                      subset = trainRows_sec,
                      method = "rpart",
-                     tuneGrid = data.frame(cp = exp(seq(-14,-6, len = 50))),
+                     tuneGrid = data.frame(cp = exp(seq(-20,-6, len = 100))),
                      trControl = ctrl2,
                      metric = "ROC")
 
 ggplot(model.rpart, highlight = TRUE)
 ```
 
-## Model 5: Random forrest
+## Model 5: Random forest
 ```{r}
 rf.grid.sec <- expand.grid(mtry = 1:15,
                            splitrule = "gini",
@@ -565,6 +565,7 @@ model.rf <- train(brecovery_time ~ . , secondary,
                   trControl = ctrl2)
 
 ggplot(model.rf, highlight = TRUE)
+model.rf$bestTune
 ```
 
 ## Model 6: Boosting
@@ -595,8 +596,9 @@ set.seed(2460)
 model.svml <- train(brecovery_time ~ . , 
                     data = secondary[trainRows_sec,],
                     method = "svmLinear2",
-                    tuneGrid = data.frame(cost = exp(seq(-10, -1,len=50))),
-                    trControl = ctrl1)
+                    tuneGrid = data.frame(cost = exp(seq(-50, 5,len=100))),
+                    trControl = ctrl1,
+                    tuneLength = 10000)
 
 plot(model.svml, highlight = TRUE, xTrans = log)
 ```
