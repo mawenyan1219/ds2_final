@@ -423,7 +423,8 @@ rpart.fit <- train(lrecovery_time ~ . ,
                    primary[trainRows,],
                    method = "rpart",
                    tuneGrid = data.frame(cp = exp(seq(-9,-4, length = 50))),
-                   trControl = ctrl1)
+                   trControl = ctrl1,
+                   preProcess = c("center", "scale"))
 
 ggplot(rpart.fit, highlight = TRUE)
 
@@ -443,7 +444,8 @@ rf.fit <- train(lrecovery_time ~ . ,
                 primary[trainRows,],
                 method = "ranger",
                 tuneGrid = rf.grid,
-                trControl = ctrl1)
+                trControl = ctrl1,
+                preProcess = c("center", "scale"))
 
 ggplot(rf.fit, highlight = TRUE)
 ```
@@ -463,6 +465,7 @@ gbm.fit <- train(lrecovery_time ~ . ,
                  method = "gbm",
                  tuneGrid = gbm.grid,
                  trControl = ctrl1,
+                 preProcess = c("center", "scale"),
                  verbose = F)
 
 ggplot(gbm.fit, highlight = T)
@@ -608,7 +611,8 @@ model.glm <- train(x = secondary[trainRows_sec,2:17],
                    y = secondary$brecovery_time[trainRows_sec],
                    method = "glm",
                    metric = "ROC",
-                   trControl = ctrl2)
+                   trControl = ctrl2,
+                   preProcess = c("center", "scale"))
 
 summary(model.glm)
 ```
@@ -623,7 +627,8 @@ model.mars <- train(x = secondary[trainRows_sec,2:17],
                     tuneGrid = expand.grid(degree = 1:3,
                                            nprune = 2:26),
                     metric = "ROC",
-                    trControl = ctrl2)
+                    trControl = ctrl2,
+                    preProcess = c("center", "scale"))
 
 plot(model.mars)
 
@@ -640,7 +645,8 @@ model.lda <- train(x = secondary[trainRows_sec,2:17],
                    y = secondary$brecovery_time[trainRows_sec],
                    method = "lda",
                    metric = "ROC",
-                   trControl = ctrl2)
+                   trControl = ctrl2,
+                   preProcess = c("center", "scale"))
 
 summary(model.lda)
 ```
@@ -654,7 +660,8 @@ model.rpart <- train(brecovery_time ~ . , secondary,
                      method = "rpart",
                      tuneGrid = data.frame(cp = exp(seq(-20,-5, len = 100))),
                      trControl = ctrl2,
-                     metric = "ROC")
+                     metric = "ROC",
+                     preProcess = c("center", "scale"))
 
 ggplot(model.rpart, highlight = TRUE)
 
@@ -674,7 +681,8 @@ model.rf <- train(brecovery_time ~ . , secondary,
                   method = "ranger",
                   tuneGrid = rf.grid.sec,
                   metric = "ROC",
-                  trControl = ctrl2)
+                  trControl = ctrl2,
+                  preProcess = c("center", "scale"))
 
 ggplot(model.rf, highlight = TRUE)
 
@@ -697,45 +705,12 @@ model.gbmA <- train(brecovery_time ~ . , secondary,
                     method = "gbm",
                     distribution = "adaboost",
                     metric = "ROC",
+                    preProcess = c("center", "scale"),
                     verbose = FALSE)
 
 ggplot(model.gbmA, highlight = TRUE)
 ```
 
-## Model 7: Support vector classifier (linear kernel)
-```{r warning=FALSE, message=FALSE}
-set.seed(2460)
-
-model.svml <- train(brecovery_time ~ . , 
-                    data = secondary[trainRows_sec,],
-                    method = "svmLinear2",
-                    tuneGrid = data.frame(cost = exp(seq(-50, 5,len = 100))),
-                    trControl = ctrl1,
-                    tuneLength = 10000)
-
-plot(model.svml, highlight = TRUE, xTrans = log)
-```
-
-## Model 8: Support vector machine (radial kernel)
-```{r warning=FALSE, message=FALSE, eval=FALSE}
-svmr.grid <- expand.grid(C = exp(seq(1,7,len=50)),
-                         sigma = exp(seq(-10,-2,len=20)))
-
-set.seed(2460)
-
-model.svmr <- train(brecovery_time ~ . , secondary,
-                     subset = trainRows_sec,
-                     method = "svmRadialSigma",
-                     tuneGrid = svmr.grid,
-                     trControl = ctrl1)
-
-myCol <- rainbow(25)
-
-myPar <- list(superpose.symbol = list(col = myCol),
-              superpose.line = list(col = myCol))
-
-plot(model.svmr, highlight = TRUE, par.settings = myPar)
-```
 
 
 ## Model comparison
@@ -745,8 +720,7 @@ res_sec <- resamples(list(logistic = model.glm,
                           lda = model.lda,
                           classification.tree = model.rpart,
                           rf = model.rf,
-                          boosting = model.gbmA,
-                          linear.kernel = model.svml))
+                          boosting = model.gbmA))
 
 summary(res_sec)
 
