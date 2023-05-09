@@ -412,13 +412,33 @@ ggplot(mars.fit, highlight = TRUE)
 
 mars.fit$bestTune
 
+summary(mars.fit)
+
 coef(mars.fit$finalModel) %>% round(2) %>% 
   as.matrix() %>% as.data.frame() %>% View()
 ```
 
+### Variable importance
+```{r warning=FALSE, message=FALSE}
+vip(mars.fit,
+    method = "permute",
+    train = primary[trainRows,],
+    target = "lrecovery_time",
+    metric = "RMSE",
+    nsim = 10,
+    pred_wrapper = predict,
+    geom = "boxplot",
+    all_permutations = TRUE,
+    mapping = aes_string(fill = "Variable"))
+```
+
 ### Partial dependence
 ```{r warning=FALSE, message=FALSE}
-pdp::partial(mars.fit, pred.var = c("age"), grid.resolution = 200) %>% autoplot()
+pdp1 <- mars.fit %>%
+  partial(pred.var = c("bmi")) %>%
+  autoplot(train = primary[trainRows,], rug = TRUE)
+
+pdp1
 ```
 
 
@@ -461,30 +481,6 @@ rf.fit$bestTune
 ggplot(rf.fit, highlight = TRUE)
 ```
 
-### Variable importance
-```{r warning=FALSE, message=FALSE}
-vip(rf.fit,
-    method = "permute",
-    train = primary[trainRows,],
-    target = "lrecovery_time",
-    metric = "RMSE",
-    nsim = 10,
-    pred_wrapper = predict,
-    geom = "boxplot",
-    all_permutations = TRUE,
-    mapping = aes_string(fill = "Variable"))
-```
-
-### Partial dependence
-```{r warning=FALSE, message=FALSE}
-pdp1.rf <- rf.fit %>%
-  partial(pred.var = c("bmi")) %>%
-  autoplot(train = primary[trainRows,], rug = TRUE)
-
-pdp1.rf
-```
-
-
 ## Model 10: Boosting
 ```{r warning=FALSE, message=FALSE}
 gbm.grid <- expand.grid(n.trees = c(750,1000,1500,2000,2500,3000,3500),
@@ -526,6 +522,18 @@ summary(res_pri)
 bwplot(res_pri, metric = "RMSE")
 ```
 
+## Select final model 
+
+Since MARS model has the lowest mean RMSE, we selected it as our final model. 
+
+### Test error
+```{r warning=FALSE, message=FALSE}
+mars.pred <- predict(mars.fit, newdata = x2)
+
+mars.testerror = mean((mars.pred - y2)^2)
+
+mars.testerror
+```
 
 
 # Secondary analysis: binary time to recovery
