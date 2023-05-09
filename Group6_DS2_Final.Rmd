@@ -141,11 +141,9 @@ LDL = hist(dat_bind_primary$LDL[trainRows], breaks = 50)
 ```
 
 
-## Understand the correlation between continuous predictors ****
+## Understand the correlation between continuous predictors
 ```{r warning=FALSE, message=FALSE}
 correlation <- model.matrix(lrecovery_time ~ ., dat_bind_primary)[trainRows,-1]
-
-corrplot(cor(correlation), method = "circle", type = "full")
 
 corrplot(cor(dat_bind_primary[trainRows,c(1,5,6,7,10,11)]), method = "circle", type = "full")
 ```
@@ -174,9 +172,9 @@ featurePlot(x = model.matrix(lrecovery_time ~ ., dat_bind_primary)[trainRows,c("
 
 ## Considering variables based on the EDA
 
-From the correlation plot, we can observe that `bmi` is highly correlated with `weight` and `height`, which makes sense because BMI is calculated by weight divided by the square of height. This demonstrates collinearity between the variables, and to account for this, I will remove the `bmi` variable for the predictions. 
+From the correlation plot, we can observe that `bmi` is highly correlated with `weight` and `height`, which makes sense because BMI is calculated by weight divided by the square of height. This demonstrates collinearity between the variables.
 
-Also, I believe that the `study` variable is more of a geographical indicator to distinguish different study sites, and it will not be critical in predicting recovery time. Therefore, I will also remove  the `study` variable. 
+I believe that the `study` variable is more of a geographical indicator to distinguish different study sites, and it will not be critical in predicting recovery time. Therefore, I will remove  the `study` variable. 
 
 Lastly, I will remove variables `race` and `smoking` since I have created dummy variables for them and I will use the dummy variables in further analyses.
 
@@ -194,7 +192,7 @@ primary = dat_bind_primary %>%
 
 # remove variables that will not be used
 primary = primary %>% 
-  select(-bmi, -study, -race, -smoking) 
+  select(-study, -race, -smoking) 
 
 # partition again based on the new outcome variable
 set.seed(2460)
@@ -329,7 +327,7 @@ summary(gam.fit)
 
 ### Plot continuous predictors in GAM
 ```{r warning=FALSE, message=FALSE}
-var.names <- c("age", "SBP", "LDL", "height", "weight", "-")
+var.names <- c("age", "SBP", "LDL", "bmi", "height", "weight")
 
 # make a matrix for easier comprehension of the plot with 16 predictors
 matrix <- matrix(var.names, nrow = 2, ncol = 3, byrow = TRUE)
@@ -351,7 +349,7 @@ title(main = "Predictors' Plot", cex.main = 1, font.main = 3, outer = TRUE, line
 ## Model 7: MARS
 ```{r warning=FALSE, message=FALSE}
 mars_grid <- expand.grid(degree = 1:3,
-                         nprune = 2:25) 
+                         nprune = 2:26) 
 
 set.seed(2460)
 
@@ -376,7 +374,7 @@ set.seed(2460)
 rpart.fit <- train(lrecovery_time ~ . ,
                    primary[trainRows_pri,],
                    method = "rpart",
-                   tuneGrid = data.frame(cp = exp(seq(-9,-5, length = 50))),
+                   tuneGrid = data.frame(cp = exp(seq(-9,-4, length = 50))),
                    trControl = ctrl1)
 
 ggplot(rpart.fit, highlight = TRUE)
@@ -387,7 +385,7 @@ rpart.plot(rpart.fit$finalModel)
 
 ## Model 9: Random forest 
 ```{r warning=FALSE, message=FALSE}
-rf.grid <- expand.grid(mtry = 1:15, #15 predictors
+rf.grid <- expand.grid(mtry = 1:16, #16 predictors
                        splitrule = "variance",
                        min.node.size = 1:6)
 
@@ -475,7 +473,7 @@ secondary = dat_bind_secondary %>%
 
 # remove variables that will not be used
 secondary = secondary %>% 
-  dplyr::select(-bmi, -study, -race, -smoking) %>% 
+  dplyr::select(-study, -race, -smoking) %>% 
   dplyr::select(brecovery_time, everything()) #arrange variable orders
 
 # partition again based on the new outcome variable
@@ -494,7 +492,7 @@ contrasts(secondary$brecovery_time)
 ```{r warning=FALSE, message=FALSE}
 set.seed(2460)
 
-model.glm <- train(x = secondary[trainRows_sec,2:16], 
+model.glm <- train(x = secondary[trainRows_sec,2:17], 
                    y = secondary$brecovery_time[trainRows_sec],
                    method = "glm",
                    metric = "ROC",
@@ -507,11 +505,11 @@ summary(model.glm)
 ```{r warning=FALSE, message=FALSE}
 set.seed(2460)
 
-model.mars <- train(x = secondary[trainRows_sec,2:16], 
+model.mars <- train(x = secondary[trainRows_sec,2:17], 
                     y = secondary$brecovery_time[trainRows_sec],
                     method = "earth",
                     tuneGrid = expand.grid(degree = 1:3,
-                                           nprune = 2:25),
+                                           nprune = 2:26),
                     metric = "ROC",
                     trControl = ctrl2)
 
@@ -526,7 +524,7 @@ coef(model.mars$finalModel)
 ```{r warning=FALSE, message=FALSE}
 set.seed(2460)
 
-model.lda <- train(x = secondary[trainRows_sec,2:16], 
+model.lda <- train(x = secondary[trainRows_sec,2:17], 
                    y = secondary$brecovery_time[trainRows_sec],
                    method = "lda",
                    metric = "ROC",
@@ -542,16 +540,18 @@ set.seed(2460)
 model.rpart <- train(brecovery_time ~ . , secondary, 
                      subset = trainRows_sec,
                      method = "rpart",
-                     tuneGrid = data.frame(cp = exp(seq(-20,-6, len = 100))),
+                     tuneGrid = data.frame(cp = exp(seq(-20,-5, len = 100))),
                      trControl = ctrl2,
                      metric = "ROC")
 
 ggplot(model.rpart, highlight = TRUE)
+
+rpart.plot(model.rpart$finalModel)
 ```
 
 ## Model 5: Random forest
 ```{r}
-rf.grid.sec <- expand.grid(mtry = 1:15,
+rf.grid.sec <- expand.grid(mtry = 1:16,
                            splitrule = "gini",
                            min.node.size = seq(from = 2, to = 10, by = 2))
 
@@ -565,6 +565,7 @@ model.rf <- train(brecovery_time ~ . , secondary,
                   trControl = ctrl2)
 
 ggplot(model.rf, highlight = TRUE)
+
 model.rf$bestTune
 ```
 
