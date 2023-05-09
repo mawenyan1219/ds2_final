@@ -223,6 +223,9 @@ lm.fit <- train(x, y,
                 trControl = ctrl1)
 
 summary(lm.fit)
+
+coef(lm.fit$finalModel) %>% 
+  as.matrix() %>% as.data.frame() %>% View()
 ```
 
 ## Model 2: Ridge
@@ -240,7 +243,8 @@ ridge.fit$bestTune
 
 plot(ridge.fit, xTrans = log)
 
-coef(ridge.fit$finalModel, s = ridge.fit$bestTune$lambda)
+coef(ridge.fit$finalModel, s = ridge.fit$bestTune$lambda) %>% 
+  as.matrix() %>% as.data.frame() %>% View()
 ```
 
 
@@ -259,7 +263,8 @@ lasso.fit$bestTune
 
 plot(lasso.fit, xTrans = log)
 
-coef(lasso.fit$finalModel, s = lasso.fit$bestTune$lambda)
+coef(lasso.fit$finalModel, s = lasso.fit$bestTune$lambda) %>% 
+  as.matrix() %>% as.data.frame() %>% View()
 ```
 
 
@@ -284,7 +289,8 @@ myPar <- list(superpose.symbol = list(col = myCol),
 
 plot(enet.fit, par.settings = myPar, xTrans = log)
 
-coef(enet.fit$finalModel, s = enet.fit$bestTune$lambda)
+coef(enet.fit$finalModel, s = enet.fit$bestTune$lambda) %>% 
+  as.matrix() %>% as.data.frame() %>% View()
 ```
 
 
@@ -304,7 +310,8 @@ ggplot(pls.fit, highlight = TRUE) + theme_bw()
 
 summary(pls.fit)
 
-coef(pls.fit$finalModel)
+coef(pls.fit$finalModel)%>% 
+  as.matrix() %>% as.data.frame() %>% View()
 ```
 
 
@@ -364,7 +371,8 @@ ggplot(mars.fit, highlight = TRUE)
 
 mars.fit$bestTune
 
-coef(mars.fit$finalModel)
+coef(mars.fit$finalModel) %>% 
+  as.matrix() %>% as.data.frame() %>% View()
 ```
 
 
