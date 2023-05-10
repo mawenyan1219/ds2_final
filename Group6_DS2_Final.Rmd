@@ -27,7 +27,7 @@ library(gbm)
 library(pdp)
 library(vip)
 
-setwd("D:/CUMC/Y2S2/DS2/Final/ds2_final")
+# setwd("D:/CUMC/Y2S2/DS2/Final/ds2_final")
 
 load("./recovery.RData") 
 ```
@@ -693,12 +693,6 @@ pdp2 <- pdp::partial(model.mars,
            xlab = "BMI", ylab = "Predicted Recovery Time")
                      
 pdp2                     
-
-partial_plot <- partial(model.mars, pred.var = "bmi")
-
-# Plot the partial dependence curve
-plotPartial(partial_plot)
-
 ```
 
 
