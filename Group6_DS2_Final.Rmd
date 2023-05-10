@@ -62,7 +62,7 @@ trainRows <- createDataPartition(y = dat_bind$recovery_time,
 ## Understanding the outcome variable `recovery_time`
 ```{r warning=FALSE, message=FALSE}
 # check the outcome variable
-hist(dat_bind$recovery_time[trainRows], breaks = 50)
+hist(dat_bind$recovery_time[trainRows], breaks = 100, xlab = "Recovery time (days)", main = "")
 ```
 
 The distribution of the outcome variable `recovery_time` is heavily right-skewed. To account for this, we will take the log-transformation of the outcome and use that variable for following analyses.
@@ -75,7 +75,7 @@ dat_bind_primary = dat_bind %>%
   dplyr::select(-recovery_time, -id) 
   
 # log-transformation helped with making it more normal
-hist(dat_bind_primary$lrecovery_time[trainRows], breaks = 50)
+hist(dat_bind_primary$lrecovery_time[trainRows], breaks = 50, xlab = "Log(Recovery time)", main = "")
 ```
 
 
@@ -94,29 +94,35 @@ dfSummary(dat_bind_primary[trainRows, -1])
 ## Understand categorical variables
 ```{r warning=FALSE, message=FALSE}
 gender = (dat_bind_primary[trainRows, -1]) %>% 
-  ggplot(aes(x = gender)) +  geom_bar() +  labs(x = "Gender", y = "Count")
+  ggplot(aes(x = factor(gender))) +  geom_bar() +  labs(x = "Gender", y = "Count")+
+  scale_x_discrete(labels = c("Female", "Male")) +theme_classic()
 
 race = (dat_bind_primary[trainRows, -1]) %>% 
   ggplot(aes(x = race)) + geom_bar() + labs(x = "Race",y = "Count") +
-  scale_x_discrete(labels = c("White", "Asian", "Black", "Hispanic"))
+  scale_x_discrete(labels = c("White", "Asian", "Black", "Hispanic"))+theme_classic()
 
 smoking = (dat_bind_primary[trainRows, -1]) %>% 
-  ggplot(aes(x = smoking)) + geom_bar() + labs(x = "Smoking", y = "Count")
+  ggplot(aes(x = smoking)) + geom_bar() + labs(x = "Smoking", y = "Count")+
+  scale_x_discrete(labels = c("Never\nsmoked", "Former\nsmoker", "Current\nsmoker"))+theme_classic()
 
 hypertension = (dat_bind_primary[trainRows, -1]) %>% 
-  ggplot(aes(x = hypertension)) + geom_bar() + labs(x = "Hypertension", 
-                                                    y = "Count")
+  ggplot(aes(x = factor(hypertension))) + geom_bar() + labs(x = "Hypertension", 
+                                                    y = "Count")+
+  scale_x_discrete(labels = c("No hypertension", "Hypertension"))+theme_classic()
 diabetes = (dat_bind_primary[trainRows, -1]) %>% 
-  ggplot(aes(x = diabetes)) + geom_bar() + labs(x = "Diabetes",y = "Count")
+  ggplot(aes(x = factor(diabetes))) + geom_bar() + labs(x = "Diabetes",y = "Count")+
+  scale_x_discrete(labels = c("No diabetes", "Diabetes"))+theme_classic()
 
 vaccine = (dat_bind_primary[trainRows, -1]) %>% 
-  ggplot(aes(x = vaccine)) + geom_bar() + labs(x = "Vaccination status",
-                                               y = "Count")
+  ggplot(aes(x = factor(vaccine))) + geom_bar() + labs(x = "Vaccination status",
+                                               y = "Count")+
+  scale_x_discrete(labels = c("Not vaccinated", "Vaccinated"))+theme_classic()
 severity = (dat_bind_primary[trainRows, -1]) %>% 
-  ggplot(aes(x = severity)) + geom_bar() + labs(x = "Severity", y = "Count")
+  ggplot(aes(x = factor(severity))) + geom_bar() + labs(x = "Severity", y = "Count")+
+  scale_x_discrete(labels = c("Not severe", "Severe"))+theme_classic()
 
 study = (dat_bind_primary[trainRows, -1]) %>% 
-  ggplot(aes(x = study)) + geom_bar() + labs(x = "Study Site", y = "Count")
+  ggplot(aes(x = study)) + geom_bar() + labs(x = "Study Site", y = "Count")+theme_classic()
 
 cat_combined_plot = ggarrange(gender, race, smoking, hypertension, 
                                diabetes, vaccine,severity, study,
@@ -130,17 +136,17 @@ cat_combined_plot
 ```{r warning=FALSE, message=FALSE}
 par(mar = c(3, 3, 2, 2), mfrow = c(2, 3))
 
-age = hist(dat_bind_primary$age[trainRows], breaks = 50)
+age = hist(dat_bind_primary$age[trainRows], breaks = 50, xlab = "Age (years)", main = "Age")
 
-bmi = hist(dat_bind_primary$bmi[trainRows], breaks = 50)
+bmi = hist(dat_bind_primary$bmi[trainRows], breaks = 50, xlab = "BMI (kg/m^2)", main = "BMI")
 
-height = hist(dat_bind_primary$height[trainRows], breaks = 50)
+height = hist(dat_bind_primary$height[trainRows], breaks = 50, xlab = "Height (cm)", main = "Height")
 
-weight = hist(dat_bind_primary$weight[trainRows], breaks = 50)
+weight = hist(dat_bind_primary$weight[trainRows], breaks = 50, xlab = "Weight (kg)", main = "Weight")
 
-SBP = hist(dat_bind_primary$SBP[trainRows], breaks = 50)
+SBP = hist(dat_bind_primary$SBP[trainRows], breaks = 50, xlab = "SBP (mm/Hg)", main = "Systolic blood pressure")
 
-LDL = hist(dat_bind_primary$LDL[trainRows], breaks = 50)
+LDL = hist(dat_bind_primary$LDL[trainRows], breaks = 50, xlab = "LDL (mg/dL)", main = "LDL cholesterol")
 ```
 
 
@@ -175,34 +181,34 @@ featurePlot(x = model.matrix(lrecovery_time ~ ., dat_bind_primary)[trainRows,c("
 ## Understand the relationship between categorical predictors and continuous outcome
 ```{r warning=FALSE, message=FALSE}
 gender3 = (dat_bind_primary[trainRows, -1]) %>% 
-  ggplot(aes(x = as.factor(gender), y = lrecovery_time)) + geom_boxplot() + labs(x = "Gender", y = "Log Recovery Time") + scale_x_discrete(labels = c("Female", "Male"))
+  ggplot(aes(x = as.factor(gender), y = lrecovery_time)) + geom_boxplot() + labs(x = "Gender", y = "Log Recovery Time") + scale_x_discrete(labels = c("Female", "Male")) + theme_classic()
 
 race3 = (dat_bind_primary[trainRows, -1]) %>% 
   ggplot(aes(x = as.factor(race), y = lrecovery_time)) + geom_boxplot() + labs(x = "Race", y = "Log Recovery Time") +
-  scale_x_discrete(labels = c("White", "Asian", "Black", "Hispanic"))
+  scale_x_discrete(labels = c("White", "Asian", "Black", "Hispanic"))+ theme_classic()
 
 smoking3 = (dat_bind_primary[trainRows, -1]) %>% 
   ggplot(aes(x = as.factor(smoking), y = lrecovery_time)) + geom_boxplot() + labs(x = "Smokoing Status", y = "Log Recovery Time") +
-  scale_x_discrete(labels = c("Never smoked", "Former Smoker", "Current smoker"))
+  scale_x_discrete(labels = c("Never\nsmoked", "Former\nsmoker", "Current\nsmoker"))+ theme_classic()
 
 hypertension3 = (dat_bind_primary[trainRows, -1]) %>% 
   ggplot(aes(x = as.factor(hypertension), y = lrecovery_time)) + geom_boxplot() + labs(x = "Hypertension Status", y = "Log Recovery Time") +
-  scale_x_discrete(labels = c("No", "Yes"))
+  scale_x_discrete(labels = c("No", "Yes"))+ theme_classic()
 
 diabetes3 = (dat_bind_primary[trainRows, -1]) %>% 
   ggplot(aes(x = as.factor(diabetes), y = lrecovery_time)) + geom_boxplot() + labs(x = "Diabetes Status", y = "Log Recovery Time") +
-  scale_x_discrete(labels = c("No", "Yes"))
+  scale_x_discrete(labels = c("No", "Yes"))+ theme_classic()
 
 vaccine3 = (dat_bind_primary[trainRows, -1]) %>% 
   ggplot(aes(x = as.factor(vaccine), y = lrecovery_time)) + geom_boxplot() + labs(x = "Vaccination Status", y = "Log Recovery Time") +
-  scale_x_discrete(labels = c("No", "Yes"))
+  scale_x_discrete(labels = c("No", "Yes"))+ theme_classic()
 
 severity3 = (dat_bind_primary[trainRows, -1]) %>% 
   ggplot(aes(x = as.factor(severity), y = lrecovery_time)) + geom_boxplot() + labs(x = "Severity", y = "Log Recovery Time") +
-  scale_x_discrete(labels = c("Not severe", "Severe"))
+  scale_x_discrete(labels = c("Not severe", "Severe"))+ theme_classic()
 
 study3 = (dat_bind_primary[trainRows, -1]) %>% 
-  ggplot(aes(x = as.factor(study), y = lrecovery_time)) + geom_boxplot() + labs(x = "Study", y = "Log Recovery Time")
+  ggplot(aes(x = as.factor(study), y = lrecovery_time)) + geom_boxplot() + labs(x = "Study", y = "Log Recovery Time")+ theme_classic()
 
 cat_combined_plot3 = ggarrange(gender3, race3, smoking3, hypertension3, 
                                diabetes3, vaccine3, severity3, study3,
